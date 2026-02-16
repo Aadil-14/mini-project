@@ -4,6 +4,8 @@ import AppLayout from './components/layout/AppLayout';
 import Home from './pages/Home';
 import Stats from './pages/Stats';
 import Wallets from './pages/Wallets';
+import Categories from './pages/Categories';
+import Settings from './pages/Settings';
 
 
 function App() {
@@ -14,8 +16,8 @@ function App() {
           <Route index element={<Home />} />
           <Route path="stats" element={<Stats />} />
           <Route path="wallets" element={<Wallets />} />
-          <Route path="categories" element={<div>Categories Page</div>} />
-          <Route path="settings" element={<div>Settings Page</div>} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

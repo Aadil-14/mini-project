@@ -17,7 +17,7 @@ const Sidebar = () => {
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br from-indigo-500 to-blue-500">
                     ET
                 </div>
-                <h1 className="text-xl font-bold text-gray-800">Expense Tracker</h1>
+                <h1 className="text-xl font-bold text-gray-800">POCKETLOG</h1>
             </div>
 
             <nav className="flex-1">
