@@ -1,19 +1,22 @@
-import React, { useState, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, Edit2, Trash2, RefreshCcw, Calendar, CreditCard, Coffee, ShoppingBag, Car, Home as HomeIcon } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
+import { Search, ChevronLeft, ChevronRight, Edit2, Trash2, RefreshCcw, Calendar, CreditCard, Coffee, ShoppingBag, Car, Home as HomeIcon, HelpCircle } from 'lucide-react';
 
-// Mock Transaction Data
-const mockTransactions = [
-    { id: 1, type: 'expense', category: 'Food & Dining', note: 'Grocery from Supermarket', wallet: 'Personal Cash', date: '2026-03-12', amount: 1200, icon: <Coffee size={16} />, color: 'bg-orange-100 text-orange-600' },
-    { id: 2, type: 'income', category: 'Salary', note: 'Monthly Salary', wallet: 'Primary Bank', date: '2026-03-10', amount: 85000, icon: <CreditCard size={16} />, color: 'bg-emerald-100 text-emerald-600' },
-    { id: 3, type: 'expense', category: 'Transportation', note: 'Uber to office', wallet: 'Personal Cash', date: '2026-03-09', amount: 350, icon: <Car size={16} />, color: 'bg-blue-100 text-blue-600' },
-    { id: 4, type: 'expense', category: 'Shopping', note: 'New Shoes', wallet: 'Credit Card', date: '2026-03-08', amount: 4500, icon: <ShoppingBag size={16} />, color: 'bg-purple-100 text-purple-600' },
-    { id: 5, type: 'expense', category: 'Housing', note: 'Monthly Rent', wallet: 'Primary Bank', date: '2026-03-01', amount: 15000, icon: <HomeIcon size={16} />, color: 'bg-indigo-100 text-indigo-600' },
-    { id: 6, type: 'income', category: 'Freelance', note: 'Web Design Project', wallet: 'Business Account', date: '2026-02-28', amount: 25000, icon: <CreditCard size={16} />, color: 'bg-emerald-100 text-emerald-600' },
-    { id: 7, type: 'expense', category: 'Food & Dining', note: 'Dinner with friends', wallet: 'Personal Cash', date: '2026-02-27', amount: 1800, icon: <Coffee size={16} />, color: 'bg-orange-100 text-orange-600' },
-    { id: 8, type: 'expense', category: 'Transportation', note: 'Fuel', wallet: 'Trip Wallet', date: '2026-02-26', amount: 2000, icon: <Car size={16} />, color: 'bg-blue-100 text-blue-600' },
-];
+const getCategoryDetails = (category) => {
+    switch (category) {
+        case 'Food & Dining': return { icon: <Coffee size={16} />, color: 'bg-orange-100 text-orange-600' };
+        case 'Transportation': return { icon: <Car size={16} />, color: 'bg-blue-100 text-blue-600' };
+        case 'Shopping': return { icon: <ShoppingBag size={16} />, color: 'bg-purple-100 text-purple-600' };
+        case 'Housing': return { icon: <HomeIcon size={16} />, color: 'bg-indigo-100 text-indigo-600' };
+        case 'Salary':
+        case 'Freelance': return { icon: <CreditCard size={16} />, color: 'bg-emerald-100 text-emerald-600' };
+        default: return { icon: <HelpCircle size={16} />, color: 'bg-gray-100 text-gray-600' };
+    }
+};
 
 const TransactionHistory = () => {
+    const [transactions, setTransactions] = useState([]);
+    
     // States for search and filtering
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('All Types');
@@ -24,18 +27,36 @@ const TransactionHistory = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
+    useEffect(() => {
+        const fetchTxs = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const res = await axios.get('http://127.0.0.1:5000/api/transactions', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setTransactions(res.data);
+            } catch (error) {
+                console.error('Error fetching transactions', error);
+            }
+        };
+        fetchTxs();
+    }, []);
+
     // Derived filtered transactions
     const filteredTransactions = useMemo(() => {
-        return mockTransactions.filter(t => {
-            const matchesSearch = t.note.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                  t.category.toLowerCase().includes(searchTerm.toLowerCase());
+        return transactions.filter(t => {
+            const safeNote = t.description || '';
+            const safeCategory = t.category || '';
+            const matchesSearch = safeNote.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                  safeCategory.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesType = filterType === 'All Types' || t.type.toLowerCase() === filterType.toLowerCase();
-            const matchesCategory = filterCategory === 'All Categories' || t.category === filterCategory;
-            const matchesWallet = filterWallet === 'All Wallets' || t.wallet === filterWallet;
+            const matchesCategory = filterCategory === 'All Categories' || safeCategory === filterCategory;
+            const matchesWallet = filterWallet === 'All Wallets' || t.wallet_name === filterWallet;
             
             return matchesSearch && matchesType && matchesCategory && matchesWallet;
         });
-    }, [searchTerm, filterType, filterCategory, filterWallet]);
+    }, [searchTerm, filterType, filterCategory, filterWallet, transactions]);
 
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
     const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -49,6 +70,9 @@ const TransactionHistory = () => {
         setFilterCategory('All Categories');
         setFilterWallet('All Wallets');
     };
+
+    // Extract unique wallets for the filter dropdown
+    const uniqueWallets = [...new Set(transactions.map(t => t.wallet_name))];
 
     return (
         <section className="bg-white rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 overflow-hidden flex flex-col w-full h-full">
@@ -91,11 +115,7 @@ const TransactionHistory = () => {
                     <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer w-full sm:w-auto h-[38px]"
                         value={filterWallet} onChange={(e) => setFilterWallet(e.target.value)}>
                         <option>All Wallets</option>
-                        <option>Personal Cash</option>
-                        <option>Primary Bank</option>
-                        <option>Credit Card</option>
-                        <option>Business Account</option>
-                        <option>Trip Wallet</option>
+                        {uniqueWallets.map(w => <option key={w}>{w}</option>)}
                     </select>
 
                     {/* Date Picker Button mock */}
@@ -129,27 +149,29 @@ const TransactionHistory = () => {
                     </thead>
                     <tbody className="text-sm">
                         {paginatedTransactions.length > 0 ? (
-                            paginatedTransactions.map((tx) => (
+                            paginatedTransactions.map((tx) => {
+                                const details = getCategoryDetails(tx.category);
+                                return (
                                 <tr key={tx.id} className="border-b border-gray-50 hover:bg-slate-50/80 transition-colors group">
                                     <td className="p-4 rounded-tl-xl rounded-bl-xl">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${tx.color}`}>
-                                                {tx.icon}
+                                            <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${details.color}`}>
+                                                {details.icon}
                                             </div>
-                                            <span className="font-semibold text-gray-800 whitespace-nowrap">{tx.category}</span>
+                                            <span className="font-semibold text-gray-800 whitespace-nowrap">{tx.category || 'Uncategorized'}</span>
                                         </div>
                                     </td>
-                                    <td className="p-4 text-gray-600 min-w-[160px]">{tx.note}</td>
+                                    <td className="p-4 text-gray-600 min-w-[160px]">{tx.description || '-'}</td>
                                     <td className="p-4">
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap">
-                                            {tx.wallet}
+                                            {tx.wallet_name}
                                         </span>
                                     </td>
                                     <td className="p-4 text-gray-500 whitespace-nowrap font-medium">
-                                        {new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        {new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                     </td>
                                     <td className={`p-4 text-right font-bold whitespace-nowrap ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
+                                        {tx.type === 'income' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString()}
                                     </td>
                                     <td className="p-4">
                                         <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -162,7 +184,8 @@ const TransactionHistory = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))
+                                )
+                            })
                         ) : (
                             <tr>
                                 <td colSpan="6" className="p-12 text-center text-gray-500">

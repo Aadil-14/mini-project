@@ -1,42 +1,22 @@
-import React, { useState, useMemo } from 'react';
-import { Wallet, Search, ChevronLeft, ChevronRight, Edit2, Trash2, Coffee, Car, Home as HomeIcon } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
+import { Wallet, Search, ChevronLeft, ChevronRight, Edit2, Trash2, Coffee, Car, Home as HomeIcon, HelpCircle } from 'lucide-react';
 import Modal from '../common/Modal';
 
-// Mock Data for Shared Wallets
-const sharedWalletsData = [
-    { 
-        id: 1, 
-        name: 'Trip to Goa', 
-        totalExpense: 12500,
-        members: ['A', 'D', 'P'],
-        transactions: [
-            { id: 101, type: 'expense', category: 'Food & Dining', note: 'Seafood Dinner', paidBy: 'Aadil', splitBetween: 'All (3)', amount: 4500, date: '2026-03-12', icon: <Coffee size={16} />, color: 'bg-orange-100 text-orange-600' },
-            { id: 102, type: 'expense', category: 'Transportation', note: 'Taxi to hotel', paidBy: 'Priya', splitBetween: 'Aadil, Priya', amount: 800, date: '2026-03-11', icon: <Car size={16} />, color: 'bg-blue-100 text-blue-600' },
-            { id: 103, type: 'income', category: 'Settlement', note: 'Divya paid Aadil', paidBy: 'Divya', splitBetween: 'Aadil', amount: 1500, date: '2026-03-13', icon: <Wallet size={16} />, color: 'bg-emerald-100 text-emerald-600' },
-        ]
-    },
-    { 
-        id: 2, 
-        name: 'Flat Expenses', 
-        totalExpense: 35000,
-        members: ['A', 'R'],
-        transactions: [
-            { id: 201, type: 'expense', category: 'Housing', note: 'March Rent', paidBy: 'Aadil', splitBetween: 'All (2)', amount: 20000, date: '2026-03-01', icon: <HomeIcon size={16} />, color: 'bg-indigo-100 text-indigo-600' },
-            { id: 202, type: 'expense', category: 'Housing', note: 'Electricity Bill', paidBy: 'Rahul', splitBetween: 'All (2)', amount: 2500, date: '2026-03-05', icon: <HomeIcon size={16} />, color: 'bg-indigo-100 text-indigo-600' },
-        ]
-    },
-    { 
-        id: 3, 
-        name: 'Team Lunch', 
-        totalExpense: 4200,
-        members: ['A', 'S', 'V', 'M'],
-        transactions: [
-            { id: 301, type: 'expense', category: 'Food & Dining', note: 'Barbeque Nation', paidBy: 'Shruti', splitBetween: 'All (4)', amount: 4200, date: '2026-02-28', icon: <Coffee size={16} />, color: 'bg-orange-100 text-orange-600' },
-        ]
+const getCategoryDetails = (category) => {
+    switch (category) {
+        case 'Food & Dining': return { icon: <Coffee size={16} />, color: 'bg-orange-100 text-orange-600' };
+        case 'Transportation': return { icon: <Car size={16} />, color: 'bg-blue-100 text-blue-600' };
+        case 'Housing': return { icon: <HomeIcon size={16} />, color: 'bg-indigo-100 text-indigo-600' };
+        default: return { icon: <HelpCircle size={16} />, color: 'bg-gray-100 text-gray-600' };
     }
-];
+};
 
 const SharedWallets = () => {
+    const [sharedWallets, setSharedWallets] = useState([]);
+    const [allTransactions, setAllTransactions] = useState([]);
+    const [walletMembers, setWalletMembers] = useState({});
+    
     const [selectedWallet, setSelectedWallet] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     
@@ -45,11 +25,40 @@ const SharedWallets = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    const handleOpenWallet = (wallet) => {
+    useEffect(() => {
+        const loadSharedData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const headers = { Authorization: `Bearer ${token}` };
+
+                const balRes = await axios.get('http://127.0.0.1:5000/api/split/balances', { headers });
+                setSharedWallets(balRes.data);
+
+                const txRes = await axios.get('http://127.0.0.1:5000/api/transactions/shared', { headers });
+                setAllTransactions(txRes.data);
+            } catch (err) {
+                console.error("Error loading shared wallets", err);
+            }
+        };
+        loadSharedData();
+    }, []);
+
+    const handleOpenWallet = async (wallet) => {
         setSelectedWallet(wallet);
         setIsModalOpen(true);
         setSearchTerm('');
         setCurrentPage(1);
+
+        try {
+            const token = localStorage.getItem('token');
+            const memRes = await axios.get(`http://127.0.0.1:5000/api/wallets/${wallet.id}/members`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setWalletMembers(prev => ({...prev, [wallet.id]: memRes.data}));
+        } catch (e) {
+            console.error("Error loading members", e);
+        }
     };
 
     const handleCloseModal = () => {
@@ -60,12 +69,15 @@ const SharedWallets = () => {
     // Filter transactions for the selected wallet
     const filteredTransactions = useMemo(() => {
         if (!selectedWallet) return [];
-        return selectedWallet.transactions.filter(t => 
-            t.note.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            t.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.paidBy.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [selectedWallet, searchTerm]);
+        const walletTxs = allTransactions.filter(t => t.wallet_id === selectedWallet.id);
+        
+        return walletTxs.filter(t => {
+            const note = t.description || '';
+            const cat = t.category || '';
+            return note.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                   cat.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+    }, [selectedWallet, searchTerm, allTransactions]);
 
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
     const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -85,7 +97,12 @@ const SharedWallets = () => {
                 </div>
 
                 <div className="flex flex-col p-2 flex-1">
-                    {sharedWalletsData.map(wallet => (
+                    {sharedWallets.length === 0 && (
+                        <div className="text-center p-8 text-slate-400">
+                            No shared wallets constructed yet.
+                        </div>
+                    )}
+                    {sharedWallets.map(wallet => (
                         <div 
                             key={wallet.id}
                             onClick={() => handleOpenWallet(wallet)}
@@ -93,20 +110,39 @@ const SharedWallets = () => {
                         >
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="text-lg font-semibold">{wallet.name}</h4>
-                                <div className="flex">
-                                    {wallet.members.map((m, idx) => (
-                                        <div key={idx} className="w-6 h-6 rounded-full bg-slate-600 border-2 border-slate-800 -ml-2 first:ml-0 flex items-center justify-center text-[0.6rem] text-white font-bold">
-                                            {m}
-                                        </div>
-                                    ))}
+                            </div>
+                            <div className="flex justify-between items-end mb-3">
+                                <div>
+                                    <p className="text-xs text-slate-300 mb-1">Your Net Balance</p>
+                                    <h3 className={`text-xl font-bold ${wallet.balance < 0 ? 'text-rose-400' : wallet.balance > 0 ? 'text-emerald-400' : 'text-white'}`}>
+                                        {wallet.balance < 0 ? '-' : wallet.balance > 0 ? '+' : ''}₹{Math.abs(wallet.balance).toLocaleString()}
+                                    </h3>
                                 </div>
                             </div>
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <p className="text-xs text-slate-300 mb-1">Total Expense</p>
-                                    <h3 className="text-xl font-bold">₹{wallet.totalExpense.toLocaleString()}</h3>
-                                </div>
-                                <span className="text-xs text-indigo-200 font-medium">View details &rarr;</span>
+
+                            {/* Specific Debts Preview */}
+                            <div className="flex flex-col gap-1 mt-auto border-t border-white/10 pt-3">
+                                {(wallet.owes?.length === 0 && wallet.owedBy?.length === 0) ? (
+                                    <span className="text-xs text-slate-400">All settled</span>
+                                ) : (
+                                    <>
+                                        {wallet.owes?.slice(0, 2).map((d, i) => (
+                                            <div key={`o-${i}`} className="flex justify-between text-xs">
+                                                <span className="text-slate-300">You owe: <span className="text-white font-medium">{d.toName}</span></span>
+                                                <span className="text-rose-300 font-semibold">-₹{d.amount}</span>
+                                            </div>
+                                        ))}
+                                        {wallet.owedBy?.slice(0, 2).map((c, i) => (
+                                            <div key={`ob-${i}`} className="flex justify-between text-xs">
+                                                <span className="text-slate-300"><span className="text-white font-medium">{c.fromName}</span> owes you:</span>
+                                                <span className="text-emerald-300 font-semibold">+₹{c.amount}</span>
+                                            </div>
+                                        ))}
+                                        {(wallet.owes?.length + wallet.owedBy?.length > 2) && (
+                                            <span className="text-[10px] text-indigo-300 mt-1 cursor-pointer hover:text-white" onClick={(e) => { e.stopPropagation(); handleOpenWallet(wallet); }}>+ {wallet.owes.length + wallet.owedBy.length - 2} more connections</span>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -125,15 +161,17 @@ const SharedWallets = () => {
                         {/* Header Section */}
                         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-800 mb-1">Total Shared Expense</h2>
-                                <p className="text-2xl font-black text-indigo-600">₹{selectedWallet.totalExpense.toLocaleString()}</p>
+                                <h2 className="text-xl font-bold text-gray-800 mb-1">Your Balance In Wallet</h2>
+                                <p className={`text-2xl font-black ${selectedWallet.balance < 0 ? 'text-rose-600' : selectedWallet.balance > 0 ? 'text-emerald-600' : 'text-gray-800'}`}>
+                                    {selectedWallet.balance < 0 ? '-' : selectedWallet.balance > 0 ? '+' : ''}₹{Math.abs(selectedWallet.balance).toLocaleString()}
+                                </p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <span className="text-sm font-medium text-gray-500">Members:</span>
                                 <div className="flex">
-                                    {selectedWallet.members.map((m, idx) => (
-                                        <div key={idx} className="w-8 h-8 rounded-full bg-slate-300 border-2 border-white -ml-2 first:ml-0 flex items-center justify-center text-xs text-white font-bold shadow-sm">
-                                            {m}
+                                    {(walletMembers[selectedWallet.id] || []).map((m, idx) => (
+                                        <div key={idx} className="w-8 h-8 rounded-full bg-slate-300 border-2 border-white -ml-2 first:ml-0 flex items-center justify-center text-xs text-white font-bold shadow-sm" title={m.name}>
+                                            {m.name.charAt(0).toUpperCase()}
                                         </div>
                                     ))}
                                 </div>
@@ -164,8 +202,7 @@ const SharedWallets = () => {
                                         <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs font-semibold uppercase tracking-wider">
                                             <th className="p-4 rounded-tl-xl rounded-bl-xl">Category</th>
                                             <th className="p-4">Note</th>
-                                            <th className="p-4">Paid By</th>
-                                            <th className="p-4">Split Between</th>
+                                            <th className="p-4">Paid By (ID)</th>
                                             <th className="p-4">Date</th>
                                             <th className="p-4 text-right">Amount</th>
                                             <th className="p-4 text-center w-24">Actions</th>
@@ -173,30 +210,29 @@ const SharedWallets = () => {
                                     </thead>
                                     <tbody className="text-sm">
                                         {paginatedTransactions.length > 0 ? (
-                                            paginatedTransactions.map((tx) => (
+                                            paginatedTransactions.map((tx) => {
+                                                const details = getCategoryDetails(tx.category);
+                                                return (
                                                 <tr key={tx.id} className="border-b border-gray-50 hover:bg-slate-50/80 transition-colors group">
                                                     <td className="p-4 rounded-tl-xl rounded-bl-xl">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 ${tx.color}`}>
-                                                                {tx.icon}
+                                                            <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 ${details.color}`}>
+                                                                {details.icon}
                                                             </div>
-                                                            <span className="font-semibold text-gray-800 whitespace-nowrap">{tx.category}</span>
+                                                            <span className="font-semibold text-gray-800 whitespace-nowrap">{tx.category || 'Uncategorized'}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="p-4 text-gray-600 min-w-[140px]">{tx.note}</td>
+                                                    <td className="p-4 text-gray-600 min-w-[140px]">{tx.description || '-'}</td>
                                                     <td className="p-4">
                                                         <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-medium text-xs">
-                                                            {tx.paidBy}
+                                                            User #{tx.paid_by}
                                                         </span>
                                                     </td>
-                                                    <td className="p-4 text-gray-500 text-xs font-medium">
-                                                        {tx.splitBetween}
-                                                    </td>
                                                     <td className="p-4 text-gray-500 whitespace-nowrap font-medium text-xs">
-                                                        {new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                        {new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                     </td>
                                                     <td className={`p-4 text-right font-bold whitespace-nowrap ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                        {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
+                                                        {tx.type === 'income' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString()}
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -209,10 +245,11 @@ const SharedWallets = () => {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))
+                                                )
+                                            })
                                         ) : (
                                             <tr>
-                                                <td colSpan="7" className="p-8 text-center text-gray-500">
+                                                <td colSpan="6" className="p-8 text-center text-gray-500">
                                                     No transactions found.
                                                 </td>
                                             </tr>

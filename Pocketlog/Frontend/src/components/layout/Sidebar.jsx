@@ -6,6 +6,22 @@ const Sidebar = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
+
+    // Extract genuine user details from token payload
+    const token = localStorage.getItem('token');
+    let userDetails = { name: 'User', email: '' };
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload && payload.user) {
+                userDetails = payload.user;
+            } else {
+                userDetails.name = payload.name || 'User';
+                userDetails.email = payload.email || '';
+            }
+        } catch(e) {}
+    }
+
     const navItems = [
         { icon: LayoutDashboard, label: 'Home', path: '/' },
         { icon: PieChart, label: 'Stats', path: '/stats' },
@@ -105,8 +121,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                         />
                     </div>
                     <div className="flex-1 overflow-hidden hidden md:block lg:block">
-                        <p className="text-sm font-bold text-gray-800 truncate">Aadil Shaikh</p>
-                        <p className="text-xs text-gray-500 truncate">aadil@pocketlog.com</p>
+                        <p className="text-sm font-bold text-gray-800 truncate" title={userDetails.name}>{userDetails.name}</p>
+                        <p className="text-xs text-gray-500 truncate" title={userDetails.email}>{userDetails.email}</p>
                     </div>
                     <ChevronUp 
                         size={16} 
