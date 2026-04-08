@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const morgan = require('morgan');
+
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -10,6 +12,7 @@ const splitRoutes = require('./routes/splitRoutes');
 const app = express();
 
 app.use(cors());
+app.use(morgan('dev'));
 app.use(express.json());
 
 // Routes
