@@ -41,7 +41,7 @@ const Signup = () => {
         setIsLoading(true);
 
         try {
-            const res = await axios.post('http://127.0.0.1:5000/api/auth/register', {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, {
                 name: formData.username,
                 email: formData.email,
                 password: formData.password

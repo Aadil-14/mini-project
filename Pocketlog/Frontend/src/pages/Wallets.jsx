@@ -39,7 +39,7 @@ const Wallets = () => {
     const fetchWallets = async () => {
         try {
             if (!token) return;
-            const res = await axios.get('http://127.0.0.1:5000/api/wallets', {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/wallets`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setWallets(res.data);
@@ -73,7 +73,7 @@ const Wallets = () => {
         const name = e.target.walletName.value;
 
         try {
-            const res = await axios.post('http://127.0.0.1:5000/api/wallets', {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/wallets`, {
                 name,
                 type: walletType,
                 members: invitees
@@ -96,7 +96,7 @@ const Wallets = () => {
 
     const fetchMembers = async (walletId) => {
         try {
-            const res = await axios.get(`http://127.0.0.1:5000/api/wallets/${walletId}/members`, {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/wallets/${walletId}/members`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setActiveMembers(res.data);
@@ -117,7 +117,7 @@ const Wallets = () => {
         const memberId = e.target.memberId.value;
 
         try {
-            const res = await axios.post(`http://127.0.0.1:5000/api/wallets/${selectedWallet.id}/members`, {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/wallets/${selectedWallet.id}/members`, {
                 member_id: memberId
             }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -133,7 +133,7 @@ const Wallets = () => {
 
     const handleRemoveMember = async (memberId) => {
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/wallets/${selectedWallet.id}/members/${memberId}`, {
+            await axios.delete(`${import.meta.env.VITE_API_URL}/wallets/${selectedWallet.id}/members/${memberId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchMembers(selectedWallet.id); // Reload silently

@@ -45,15 +45,15 @@ const Home = () => {
                 const headers = { Authorization: `Bearer ${token}` };
 
                 // Fetch basic personal wallets
-                const res = await axios.get('http://127.0.0.1:5000/api/wallets', { headers });
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/wallets`, { headers });
                 setWallets(res.data);
                 
                 // Fetch authentic personal transaction ledgers for math module
-                const txRes = await axios.get('http://127.0.0.1:5000/api/transactions', { headers });
+                const txRes = await axios.get(`${import.meta.env.VITE_API_URL}/transactions`, { headers });
                 setPersonalTransactions(txRes.data);
 
                 // Fetch mathematical splits for the dashboard widgets
-                const splitRes = await axios.get('http://127.0.0.1:5000/api/split/balances', { headers });
+                const splitRes = await axios.get(`${import.meta.env.VITE_API_URL}/split/balances`, { headers });
                 setSharedWallets(splitRes.data);
 
             } catch (error) {
@@ -77,7 +77,7 @@ const Home = () => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://127.0.0.1:5000/api/transactions', {
+            await axios.post(`${import.meta.env.VITE_API_URL}/transactions`, {
                 wallet_id,
                 amount,
                 type: transactionType,
@@ -113,7 +113,7 @@ const Home = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://127.0.0.1:5000/api/wallets', {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/wallets`, {
                 name,
                 type: walletType,
                 members: invitees
@@ -127,7 +127,7 @@ const Home = () => {
             setWalletType('personal');
             setInvitees([]);
             setInviteInput('');
-            
+            z
             if (walletType === 'shared') {
                 window.location.reload(); // Refresh dash widgets automatically
             } else {

@@ -32,10 +32,10 @@ const SharedWallets = () => {
                 if (!token) return;
                 const headers = { Authorization: `Bearer ${token}` };
 
-                const balRes = await axios.get('http://127.0.0.1:5000/api/split/balances', { headers });
+                const balRes = await axios.get(`${import.meta.env.VITE_API_URL}/split/balances`, { headers });
                 setSharedWallets(balRes.data);
 
-                const txRes = await axios.get('http://127.0.0.1:5000/api/transactions/shared', { headers });
+                const txRes = await axios.get(`${import.meta.env.VITE_API_URL}/transactions/shared`, { headers });
                 setAllTransactions(txRes.data);
             } catch (err) {
                 console.error("Error loading shared wallets", err);
@@ -52,7 +52,7 @@ const SharedWallets = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const memRes = await axios.get(`http://127.0.0.1:5000/api/wallets/${wallet.id}/members`, {
+            const memRes = await axios.get(`${import.meta.env.VITE_API_URL}/wallets/${wallet.id}/members`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setWalletMembers(prev => ({...prev, [wallet.id]: memRes.data}));
