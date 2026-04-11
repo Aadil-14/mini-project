@@ -12,9 +12,7 @@ const getCategoryDetails = (category) => {
     }
 };
 
-const SharedWallets = () => {
-    const [sharedWallets, setSharedWallets] = useState([]);
-    const [allTransactions, setAllTransactions] = useState([]);
+const SharedWallets = ({ sharedWallets = [], allTransactions = [] }) => {
     const [walletMembers, setWalletMembers] = useState({});
     
     const [selectedWallet, setSelectedWallet] = useState(null);
@@ -25,24 +23,7 @@ const SharedWallets = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    useEffect(() => {
-        const loadSharedData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-                const headers = { Authorization: `Bearer ${token}` };
-
-                const balRes = await axios.get(`${import.meta.env.VITE_API_URL}/split/balances`, { headers });
-                setSharedWallets(balRes.data);
-
-                const txRes = await axios.get(`${import.meta.env.VITE_API_URL}/transactions/shared`, { headers });
-                setAllTransactions(txRes.data);
-            } catch (err) {
-                console.error("Error loading shared wallets", err);
-            }
-        };
-        loadSharedData();
-    }, []);
+    // Data fetched from parent Home.jsx
 
     const handleOpenWallet = async (wallet) => {
         setSelectedWallet(wallet);

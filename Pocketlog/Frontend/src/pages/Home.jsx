@@ -14,6 +14,7 @@ const Home = () => {
     const [isSharedTransactionsOpen, setIsSharedTransactionsOpen] = useState(false);
     const [wallets, setWallets] = useState([]);
     const [personalTransactions, setPersonalTransactions] = useState([]);
+    const [sharedTransactions, setSharedTransactions] = useState([]);
     
     // Add Wallet Flow State
     const [walletType, setWalletType] = useState('personal');
@@ -44,18 +45,17 @@ const Home = () => {
                 if (!token) return;
                 const headers = { Authorization: `Bearer ${token}` };
 
-                // Fetch basic personal wallets
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/wallets`, { headers });
-                setWallets(res.data);
-                
-                // Fetch authentic personal transaction ledgers for math module
-                const txRes = await axios.get(`${import.meta.env.VITE_API_URL}/transactions`, { headers });
+                const [walletsRes, txRes, splitRes, sharedTxRes] = await Promise.all([
+                    axios.get(`${import.meta.env.VITE_API_URL}/wallets`, { headers }),
+                    axios.get(`${import.meta.env.VITE_API_URL}/transactions`, { headers }),
+                    axios.get(`${import.meta.env.VITE_API_URL}/split/balances`, { headers }),
+                    axios.get(`${import.meta.env.VITE_API_URL}/transactions/shared`, { headers })
+                ]);
+
+                setWallets(walletsRes.data);
                 setPersonalTransactions(txRes.data);
-
-                // Fetch mathematical splits for the dashboard widgets
-                const splitRes = await axios.get(`${import.meta.env.VITE_API_URL}/split/balances`, { headers });
                 setSharedWallets(splitRes.data);
-
+                setSharedTransactions(sharedTxRes.data);
             } catch (error) {
                 console.error('Error fetching dashboard data', error);
             }
@@ -229,10 +229,10 @@ const Home = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
                 {/* Recent Activity */}
-                <TransactionHistory />
+                <TransactionHistory transactions={personalTransactions} />
 
                 {/* Shared Wallets */}
-                <SharedWallets />
+                <SharedWallets sharedWallets={sharedWallets} allTransactions={sharedTransactions} />
             </div>
 
             <Modal

@@ -97,6 +97,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                         <hr className="my-1 border-gray-100" />
                         <button
                             onClick={() => {
+                                localStorage.removeItem('token');
+                                localStorage.removeItem('user');
                                 onClose && onClose();
                                 navigate('/login');
                             }}

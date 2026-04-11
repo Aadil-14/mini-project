@@ -14,8 +14,8 @@ const getCategoryDetails = (category) => {
     }
 };
 
-const TransactionHistory = () => {
-    const [transactions, setTransactions] = useState([]);
+const TransactionHistory = ({ transactions = [] }) => {
+
     
     // States for search and filtering
     const [searchTerm, setSearchTerm] = useState('');
@@ -27,21 +27,7 @@ const TransactionHistory = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    useEffect(() => {
-        const fetchTxs = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/transactions`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setTransactions(res.data);
-            } catch (error) {
-                console.error('Error fetching transactions', error);
-            }
-        };
-        fetchTxs();
-    }, []);
+    // Data fetched from parent Home.jsx
 
     // Derived filtered transactions
     const filteredTransactions = useMemo(() => {
